@@ -1,0 +1,8 @@
+---
+- name: Pull docker frontend image and run
+  become: true
+  docker_container:
+    image: '{{ docker_image }}'
+    name: frontend
+    published_ports: 80:80
+

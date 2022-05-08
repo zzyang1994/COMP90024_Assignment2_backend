@@ -1,0 +1,6 @@
+---
+#Logout to Docker Hub 
+- name: Log out of DockerHub
+  become: true
+  docker_login:
+    state: absent

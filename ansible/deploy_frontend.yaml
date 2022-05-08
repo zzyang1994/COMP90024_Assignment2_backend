@@ -1,0 +1,25 @@
+---
+- hosts: localhost
+  vars_files:
+    - host_vars/frontend-vars.yaml
+  gather_facts: true
+  roles:
+    - role: common
+    - role: images
+    - role: volume
+    - role: security-group
+    - role: instance
+
+- hosts: frontend-test
+  vars_files:
+    - host_vars/frontend-vars.yaml
+  gather_facts: true
+  vars:
+    - ansible_user: ubuntu
+    - ansible_ssh_private_key_file: ~/.ssh/test01privatekey.pem
+    - ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+  roles:
+      - role: common
+      - role: docker-login
+      - role: docker-pull-and-run
+      - role: docker-logout
