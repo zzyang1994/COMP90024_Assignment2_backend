@@ -3,9 +3,9 @@ import datetime
 import random
 
 traffic_df = pd.read_csv(
-    '/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_team21/djangoProject/app1/data/traffic.csv')
+    './app1/data/traffic.csv')
 healthy_df = pd.read_csv(
-    '/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_team21/djangoProject/app1/data/healthy.csv')
+    './app1/data/healthy.csv')
 
 
 def suburbs():
