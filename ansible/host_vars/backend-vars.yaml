@@ -10,7 +10,7 @@ inventory_dir: inventory/inventory.ini
 dockerhub_username: zzyang1994
 dockerhub_token: 651bc8ae-1e36-4e88-a112-868599ad9908
 dockerhub_email: yangzhanzhao1994@gmail.com
-docker_image: zzyang1994/cccproj2:latest
+docker_image: zzyang1994/cccproj2:backend
 
 # Volume
 volumes:

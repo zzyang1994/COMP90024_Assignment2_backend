@@ -1,7 +1,7 @@
 ---
 - hosts: localhost
   vars_files:
-    - host_vars/frontend-vars.yaml
+    - host_vars/backend-vars.yaml
   gather_facts: true
   roles:
     - role: common
@@ -10,9 +10,9 @@
     - role: security-group
     - role: instance
 
-- hosts: frontend-test
+- hosts: backend-test
   vars_files:
-    - host_vars/frontend-vars.yaml
+    - host_vars/backend-vars.yaml
   gather_facts: true
   vars:
     - ansible_user: ubuntu
