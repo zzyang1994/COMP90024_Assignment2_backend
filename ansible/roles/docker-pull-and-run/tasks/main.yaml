@@ -4,5 +4,5 @@
   docker_container:
     image: '{{ docker_image }}'
     name: frontend
-    published_ports: 80:80
+    published_ports: 8000:8000
 
