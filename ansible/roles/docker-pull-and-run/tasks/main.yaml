@@ -3,6 +3,6 @@
   become: true
   docker_container:
     image: '{{ docker_image }}'
-    name: frontend
+    name: backend
     published_ports: 8000:8000
 
