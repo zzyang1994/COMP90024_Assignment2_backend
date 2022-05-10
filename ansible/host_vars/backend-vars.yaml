@@ -2,9 +2,8 @@
 availability_zone: melbourne-qh2-uom
 instance_image: 356ff1ed-5960-4ac2-96a1-0c0198e6a999
 instance_key_name: zzyang
-instance_flavor: uom.mse.1c4g
+instance_flavor: uom.mse.2c9g
 instance_network: qh2-uom
-inventory_dir: inventory/inventory.ini
 
 # Docker vars
 dockerhub_username: zzyang1994
@@ -15,21 +14,45 @@ docker_image: zzyang1994/cccproj2:backend
 # Volume
 volumes:
   - vol_name: backend-test-vol
-    vol_size: 10
+    vol_size: 20
 
 # Security group
 security_groups:
   - name: backend_test_ssh
-    description: "Frontend security group for SSH access"
+    description: "Backend security group for SSH access"
     protocol: tcp
     port_range_min: 22
     port_range_max: 22
     remote_ip_prefix: 0.0.0.0/0
   - name: backend_test_http
-    description: "Frontend security group for HTTP"
+    description: "Backend security group for HTTP"
     protocol: tcp
     port_range_min: 8000
     port_range_max: 8000
+    remote_ip_prefix: 0.0.0.0/0
+  - name: database_test_http
+    description: "Database security group for HTTP"
+    protocol: tcp
+    port_range_min: 5984
+    port_range_max: 5984
+    remote_ip_prefix: 0.0.0.0/0
+  - name: database_test_http
+    description: "Database security group for HTTP"
+    protocol: tcp
+    port_range_min: 5986
+    port_range_max: 5986
+    remote_ip_prefix: 0.0.0.0/0
+  - name: database_test_http
+    description: "Database security group for HTTP"
+    protocol: tcp
+    port_range_min: 4369
+    port_range_max: 4369
+    remote_ip_prefix: 0.0.0.0/0
+  - name: database_test_http
+    description: "Database security group for HTTP"
+    protocol: tcp
+    port_range_min: 9100
+    port_range_max: 9200
     remote_ip_prefix: 0.0.0.0/0
 
 # Instance

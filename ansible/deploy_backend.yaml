@@ -5,12 +5,11 @@
   gather_facts: true
   roles:
     - role: common
-    - role: images
     - role: volume
     - role: security-group
     - role: instance
 
-- hosts: backend-test
+- hosts: all
   vars_files:
     - host_vars/backend-vars.yaml
   gather_facts: true
@@ -20,6 +19,10 @@
     - ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
   roles:
       - role: common
+        when: ansible_hostname == "backend-test"
       - role: docker-login
+        when: ansible_hostname == "backend-test"
       - role: docker-pull-and-run
+        when: ansible_hostname == "backend-test"
       - role: docker-logout
+        when: ansible_hostname == "backend-test"
