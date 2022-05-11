@@ -1,0 +1,13 @@
+---
+# Remove previous container and images
+- name: remove container
+  become: true
+  docker_container:
+    name: backend
+    state: absent
+
+- name: remove image
+  become: true
+  docker_image:
+    state: absent
+    name: '{{ docker_image }}'

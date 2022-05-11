@@ -20,6 +20,8 @@
   roles:
       - role: common
         when: ansible_hostname == "backend-test"
+      - role: remove-previous-image
+        when: ansible_hostname == "backend-test"
       - role: docker-login
         when: ansible_hostname == "backend-test"
       - role: docker-pull-and-run
