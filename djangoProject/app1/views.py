@@ -46,6 +46,22 @@ def get_line_data(request):
     return JsonResponse(t)
 
 @csrf_exempt
+def get_word_cloud(request):
+    suburbs = []
+    index = 0
+    while (True):
+
+        sub = request.GET.get(f'sub{index}')
+        if (sub == None):
+            break
+        index += 1
+        suburbs.append(sub)
+
+    t = {"data": {}, "msg": "Success"}
+    t['data'] = suburb_wordcloud_data(suburbs)
+    return JsonResponse(t)
+
+@csrf_exempt
 def get_suburb(request):
 
     return JsonResponse({"data": suburbs(), "msg": ""})
