@@ -42,7 +42,7 @@ def suburbs():
     get the suburb names in Melbourne
     """
     map_fun = '''function(doc) {
-        if (doc.city == 'Melbourne') {
+        if (doc.city.includes('Melbourne')) {
             emit(doc.suburb, 1);
         }
     }
@@ -70,7 +70,7 @@ def get_pie_chart_traffic(indicator):
     PIE_DATA = []
 
     map_fun = '''function(doc) {
-        if (doc.city == 'Melbourne') {
+        if (doc.city.includes('Melbourne')) {
             emit([doc.suburb, doc['Related to']], 1);
         }
     }
@@ -105,7 +105,7 @@ def get_pie_chart_healthy(indicator):
     PIE_DATA = []
 
     map_fun = '''function(doc) {
-        if (doc.city == 'Melbourne') {
+        if (doc.city.includes('Melbourne')) {
             emit([doc.suburb, doc.related_to], 1);
         }
     }
@@ -256,8 +256,8 @@ def get_bar_chart_traffic():
     data = {}
 
     map_fun = '''function(doc) {
-        if (doc.city == 'Melbourne') {
-            emit([doc.suburb, doc.related_to], 1);
+        if (doc.city.includes('Melbourne')) {
+            emit([doc.suburb, doc['Related to']], 1);
         }
     }
     '''
@@ -295,8 +295,8 @@ def get_bar_chart_healthy():
     data = {}
 
     map_fun = '''function(doc) {
-            if (doc.city == 'Melbourne') {
-                emit([doc.suburb, doc.related_to], 1);
+            if (doc.city.includes('Melbourne')) {
+                emit([doc.suburb, doc['Related to']], 1);
             }
         }
         '''
