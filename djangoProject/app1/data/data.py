@@ -5,9 +5,7 @@ import couchdb
 import json
 import shapely.wkt
 
-with open(
-        '/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/config.json',
-        'r') as f:
+with open('config.json','r') as f:
     configs = json.load(f)
     URL_Traffic = configs['url_traffic_live']
     URL_Healthy = configs['url_healthy_live']
@@ -276,7 +274,7 @@ def get_map_data():
 
 
 def get_map_geoData():
-    df = pd.read_csv("/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/suburbs_geometry.csv")
+    df = pd.read_csv("suburbs_geometry.csv")
 
     data = {
         "fields": [
