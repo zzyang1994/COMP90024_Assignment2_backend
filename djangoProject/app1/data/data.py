@@ -106,7 +106,7 @@ def get_pie_chart_healthy(indicator):
 
     map_fun = '''function(doc) {
         if (doc.city.includes('Melbourne')) {
-            emit([doc.suburb, doc.related_to], 1);
+            emit([doc.suburb, doc['Related to']], 1);
         }
     }
     '''
