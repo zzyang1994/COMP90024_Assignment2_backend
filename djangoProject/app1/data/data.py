@@ -233,7 +233,8 @@ def suburb_wordcloud_data(suburb_list):
             if row.key[1] in result:
                 result[row.key[1]] += row.value
             else:
-                result[row.key[1]] = row.value
+                if row.key[1] not in ['rt', 'nigga', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
+                    result[row.key[1]] = row.value
 
     sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
                            reverse=True)
