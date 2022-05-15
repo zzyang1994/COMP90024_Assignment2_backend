@@ -274,7 +274,7 @@ def get_map_data():
 
 
 def get_map_geoData():
-    df = pd.read_csv("suburbs_geometry.csv")
+    df = pd.read_csv("./app1/data/suburbs_geometry.csv")
 
     data = {
         "fields": [
