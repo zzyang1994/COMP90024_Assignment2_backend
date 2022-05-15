@@ -1,224 +1,302 @@
 import pandas as pd
 import datetime
 import random
-from .wordCloudData import words
+import couchdb
+import json
+import shapely.wkt
 
-traffic_df = pd.read_csv(
-    './app1/data/traffic.csv')
-healthy_df = pd.read_csv(
-    './app1/data/healthy.csv')
+with open(
+        '/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/config.json',
+        'r') as f:
+    configs = json.load(f)
+    URL_Traffic = configs['url_traffic_live']
+    URL_Healthy = configs['url_healthy_live']
+    Traffic_database_name = configs['traffic_db_name_live']
+    Healthy_database_name = configs['healthy_db_name_live']
 
-line_mock_data = [["2000-06-05", 116], ["2000-06-06", 129], ["2000-06-07", 135], ["2000-06-08", 86], ["2000-06-09", 73], ["2000-06-10", 85], ["2000-06-11", 73], ["2000-06-12", 68], ["2000-06-13", 92], ["2000-06-14", 130], ["2000-06-15", 245], ["2000-06-16", 139], ["2000-06-17", 115], ["2000-06-18", 111], ["2000-06-19", 309], ["2000-06-20", 206], ["2000-06-21", 137], ["2000-06-22", 128], ["2000-06-23", 85], ["2000-06-24", 94], ["2000-06-25", 71], ["2000-06-26", 106], ["2000-06-27", 84], ["2000-06-28", 93], ["2000-06-29", 85], ["2000-06-30", 73], ["2000-07-01", 83], ["2000-07-02", 125], ["2000-07-03", 107], ["2000-07-04", 82], ["2000-07-05", 44], ["2000-07-06", 72], ["2000-07-07", 106], ["2000-07-08", 107], ["2000-07-09", 66], ["2000-07-10", 91], ["2000-07-11", 92], ["2000-07-12", 113], ["2000-07-13", 107], ["2000-07-14", 131], ["2000-07-15", 111], ["2000-07-16", 64], ["2000-07-17", 69], ["2000-07-18", 88], ["2000-07-19", 77], ["2000-07-20", 83], ["2000-07-21", 111], ["2000-07-22", 57], ["2000-07-23", 55], ["2000-07-24", 60]];
+    URL_Traffic_H = configs['url_traffic_live']
+    URL_Healthy_H = configs['url_healthy_live']
+    Traffic_database_name_H = configs['traffic_db_name_historical']
+    Healthy_database_name_H = configs['healthy_db_name_historical']
+
+db_traffic = couchdb.Server(URL_Traffic)[Traffic_database_name]
+db_healthy = couchdb.Server(URL_Healthy)[Healthy_database_name]
+
 
 def suburbs():
-    return traffic_df['lga_name11'].to_list()
+    """
+    get the suburb names in Melbourne
+    """
+
+    return [suburb.key for suburb in db_traffic.view('suburbs/get_city', group=True)]
+    # return traffic_df['lga_name11'].to_list()
 
 
 def get_pie_chart_traffic(indicator):
-    tmp = traffic_df.sort_values(indicator, ascending=False).head(10)
-    PIE_DATA = []
-    for i in tmp.index:
-        PIE_DATA.append([tmp.loc[i, indicator], tmp.loc[i, 'lga_name11']])
+    """
+    get the tweet count for every suburb dividing by indicator of traffic
+    """
+    query_by = "q1"
+    if indicator == "congestion":
+        query_by = "q1"
+    elif indicator == "crash_rate":
+        query_by = "q2"
+    elif indicator == "accessible_station":
+        query_by = "q3"
 
-    return PIE_DATA
+    PIE_DATA = []
+
+    for row in db_traffic.view('tweet_count_by_indicator/indicator', group_level=2):
+        key = row.key
+        if key[1] == query_by:
+            PIE_DATA.append([row.value, row.key[0]])
+
+    return sorted(PIE_DATA, key=lambda item: item[0], reverse=True)[:10]
+
+
+# exit(0)
 
 
 def get_pie_chart_healthy(indicator):
-    tmp = healthy_df.sort_values(indicator, ascending=False).head(10)
+    """
+    get the tweet count for every suburb dividing by indicator of healthy
+    """
+    query_by = "q1"
+    if indicator == "smoking":
+        query_by = "q1"
+    elif indicator == "obesity":
+        query_by = "q2"
+    elif indicator == "exercise":
+        query_by = "q3"
+    elif indicator == "disease":
+        query_by = "q4"
+
     PIE_DATA = []
-    for i in tmp.index:
-        PIE_DATA.append([tmp.loc[i, indicator], tmp.loc[i, 'lga_name11']])
 
-    return PIE_DATA
+    for row in db_healthy.view('tweet_count_by_indicator/indicator', group_level=2):
+        key = row.key
+        if key[1] == query_by:
+            PIE_DATA.append([row.value, row.key[0]])
 
-def suburb_line_data(suburbs):
-    def date_range(beginDate, endDate):
-        dates = []
-        dt = datetime.datetime.strptime(beginDate, "%Y-%m-%d")
-        date = beginDate[:]
-        while date <= endDate:
-            dates.append(date)
-            dt = dt + datetime.timedelta(1)
-            date = dt.strftime("%Y-%m-%d")
-        return dates
+    return sorted(PIE_DATA, key=lambda item: item[0], reverse=True)[:10]
 
-    date_list = date_range("2021-09-01", "2022-04-15")
+
+def get_date(year, month, day):
+    '''
+    get the datetime type variable from year(string), month(abbr string), day(string)
+    '''
+    datetime_object = datetime.datetime.strptime(month, "%b")
+    month_number = datetime_object.month
+    return datetime.datetime(day=int(day), month=month_number, year=int(year))
+
+
+def suburb_line_data(suburbs_list, time='Live'):
+    """
+    get the daily tweet counts of suburbs
+    """
+
+    if time == 'Historical':
+        print(URL_Traffic_H, URL_Healthy_H, Traffic_database_name_H, Healthy_database_name_H)
+        db_traffic_H = couchdb.Server(URL_Traffic_H)[Traffic_database_name_H]
+        db_healthy_H = couchdb.Server(URL_Healthy_H)[Healthy_database_name_H]
+
+        try:
+            view_result_tr = db_traffic_H.view('daily_count/daily', group=True)
+        except:
+            view_result_tr = []
+            print("traffic error")
+        try:
+            view_result_he = db_healthy_H.view('daily_count/daily', group=True)
+        except:
+            view_result_he = []
+            print("healthy error")
+    else:
+        view_result_tr = db_traffic.view('daily_count/daily', group=True)
+        view_result_he = db_healthy.view('daily_count/daily', group=True)
+
+    date_list_timeStamp = []
     result = {}
 
-    def get_mock_value(x):
-        return x - random.randint(-20, 20)
+    # print(view_result_he, view_result_tr)
 
-    for n in suburbs:
-        res = []
-        j = 0
-        for i in range(len(date_list)):
-            if i % len(line_mock_data) == 0:
-                j = 0
-            res.append(get_mock_value(line_mock_data[j][1]))
-            j += 1
+    for row in view_result_tr:
+        sub = row.key[0]
+        if sub in suburbs_list:
+            year = row.key[1]
+            month = row.key[2]
+            day = row.key[3]
+            date = get_date(year, month, day)
 
-        result[n] = res
+            if sub in suburbs_list:
+                if sub in result:
+                    result[sub].append([date, row.value])
+                else:
+                    result[sub] = []
 
-    return result, date_list
+    for row in view_result_he:
+        # print(row)
+        sub = row.key[0]
+        if sub in suburbs_list:
+            year = row.key[1]
+            month = row.key[2]
+            day = row.key[3]
+            date = get_date(year, month, day)
 
-def suburb_wordcloud_data(suburbs):
+            if sub in suburbs_list:
+                for i in range(len(result[sub])):
+                    if date == result[sub][i][0]:
+                        result[sub][i][1] += row.value
 
-    result = []
-    sum_ = 0
-    for key in words.keys():
-        tmp = {"value": key, "count": words[key]}
-        result.append(tmp)
-        sum_ += 1
-        if sum_ > 60:
-            break
+    for sub in result:
+        data = result[sub]
+        sorted_data = sorted(data, key=lambda item: item[0])
+        result[sub] = sorted_data
 
-    return result
+        if date_list_timeStamp == []:
+            date_list_timeStamp = [i[0].strftime("%Y-%m-%d") for i in sorted_data]
+
+        result[sub] = [i[1] for i in sorted_data]
+
+    return result, date_list_timeStamp
+
+
+def suburb_wordcloud_data(suburb_list):
+    result = {}
+
+    for row in db_traffic.view('text/textDetail', group=True):
+        # print(row)
+        if row.key[0] in suburb_list:
+            if row.key[1] in result:
+                result[row.key[1]] += row.value
+            else:
+                result[row.key[1]] = row.value
+
+    # for key in words.keys():
+    #     tmp = {"value": key, "count": words[key]}
+    #     result.append(tmp)
+    #     sum_ += 1
+    #     if sum_ > 60:
+    #         break
+    # print(result)
+    sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
+                           reverse=True)
+    # print(len(sorted_result))
+    return sorted_result[:200]
 
 
 def get_fields(aspect):
     # return traffic_df['lga_name11'].to_list()
-    if (aspect == "traffic"):
+    if aspect == "traffic":
         return ['congestion', 'crash_rate', 'accessible_station']
 
-    if (aspect == "healthy"):
+    if aspect == "healthy":
         return ['smoking', 'obesity', 'exercise', 'disease']
 
 
 def get_bar_chart_traffic():
-    fields = get_fields("traffic")
-    BAR_DATA = []
+    BAR_DATA = {"congestion": [], "crash_rate": [], "accessible_station": []}
+    query = ['q1', 'q2', 'q3']
+    data = {}
 
-    df = traffic_df.head(6)
+    for row in db_traffic.view('tweet_count_by_indicator/indicator', group_level=2):
+        key = row.key
+        if key[0] == "Melbourne":
+            continue
 
-    for field in fields:
-        tmp = {field: df[field].to_list()}
-        BAR_DATA.append((tmp))
+        if key[0] not in data:
+            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0}
 
-    return df['lga_name11'].to_list(), BAR_DATA
+        data[key[0]][key[1]] += row.value
+
+    for sub in data:
+        for i in query:
+            if i == 'q1':
+                BAR_DATA['congestion'].append(data[sub][i])
+            elif i == 'q2':
+                BAR_DATA['crash_rate'].append(data[sub][i])
+            elif i == 'q3':
+                BAR_DATA['accessible_station'].append(data[sub][i])
+
+    suburbs = [i for i in data.keys()]
+    return suburbs, [{i: BAR_DATA[i]} for i in BAR_DATA]
 
 
 def get_bar_chart_healthy():
-    fields = get_fields("healthy")
-    BAR_DATA = []
+    BAR_DATA = {"smoking": [], "obesity": [], "exercise": [], "disease": []}
+    query = ['q1', 'q2', 'q3', 'q4']
+    data = {}
 
-    df = healthy_df.head(6)
+    for row in db_healthy.view('tweet_count_by_indicator/indicator', group_level=2):
+        key = row.key
+        if key[0] == "Melbourne":
+            continue
+        if key[0] not in data:
+            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0}
 
-    for field in fields:
-        tmp = {field: df[field].to_list()}
-        BAR_DATA.append((tmp))
+        data[key[0]][key[1]] += row.value
 
-    return df['lga_name11'].to_list(), BAR_DATA
+    for sub in data:
+        for i in query:
+            if i == 'q1':
+                BAR_DATA['smoking'].append(data[sub][i])
+            elif i == 'q2':
+                BAR_DATA['obesity'].append(data[sub][i])
+            elif i == 'q3':
+                BAR_DATA['exercise'].append(data[sub][i])
+            elif i == 'q4':
+                BAR_DATA['disease'].append(data[sub][i])
+
+    suburbs = [i for i in data.keys()]
+    return suburbs, [{i: BAR_DATA[i]} for i in BAR_DATA]
 
 
-RADAR_DATA = [
-    {
-        "value": [4200, 3000, 20000, 35000, 50000, 18000],
-        "name": 'Allocated Budget'
-    },
-    {
-        "value": [5000, 14000, 28000, 26000, 42000, 21000],
-        "name": 'Actual Spending'
-    }
-]
-
-RADAR_INDICATOR = [
-    {"name": 'Sales', "max": 6500},
-    {"name": 'Administration', "max": 16000},
-    {"name": 'Information Technology', "max": 30000},
-    {"name": 'Customer Support', "max": 38000},
-    {"name": 'Development', "max": 52000},
-    {"name": 'Marketing', "max": 25000}
-]
-
-SUNBURST_DATA = [
-    {
-        "name": 'Grandpa',
-        "children": [
-            {
-                "name": 'Uncle Leo',
-                "value": 15,
-                "children": [
-                    {
-                        "name": 'Cousin Jack',
-                        "value": 2
-                    },
-                    {
-                        "name": 'Cousin Mary',
-                        "value": 5,
-                        "children": [
-                            {
-                                "name": 'Jackson',
-                                "value": 2
-                            }
-                        ]
-                    },
-                    {
-                        "name": 'Cousin Ben',
-                        "value": 4
-                    }
-                ]
-            },
-            {
-                "name": 'Father',
-                "value": 10,
-                "children": [
-                    {
-                        "name": 'Me',
-                        "value": 5
-                    },
-                    {
-                        "name": 'Brother Peter',
-                        "value": 1
-                    }
-                ]
-            }
-        ]
-    }
-]
-
-MAP_DATA = {
-    "fields": [
-        {
-            "name": "index",
-            "format": "",
-            "type": "real",
-        },
-        {
-            "name": "time",
-            "format": "yyyy-MM-dd HH:mm:ss",
-            "type": "timestamp",
-        },
-        {
-            "name": "friends_count",
-            "format": "",
-            "type": "real",
-        },
-        {
-            "name": "lat",
-            "format": "",
-            "type": "real",
-        },
-        {
-            "name": "long",
-            "format": "",
-            "type": "real",
-        },
-    ],
-    "rows": [
-        [
-            0,
-            "2014-07-28 16:58:48",
-            148,
-            -37.97935827,
-            145.05330569,
+def get_map_data():
+    data = {
+        "fields": [
+            {"name": "time", "format": "yyyy-MM-dd", "type": "timestamp"},
+            {"name": "lat", "format": "", "type": "real"},
+            {"name": "long", "format": "", "type": "real"},
+            {"name": "importance", "format": "", "type": "real"},
+            {"name": "sentiment", "format": "", "type": "real"},
         ],
-        [
-            1,
-            "2014-07-28 16:59:43",
-            112,
-            -37.83740582,
-            144.99653022,
-        ],
-    ],
-}
+        "rows": []
+    }
 
+    for row in db_healthy.view('tweets/info'):
+        longitude, latitude = row.key
+        importance, sentiment, year, month, day = row.value
+
+        date = get_date(year, month, day).strftime("%Y-%m-%d")
+
+        tmp = [date, latitude, longitude, importance, sentiment]
+
+        data['rows'].append(tmp)
+
+    return data
+
+
+def get_map_geoData():
+    df = pd.read_csv("/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/suburbs_geometry.csv")
+
+    data = {
+        "fields": [
+            {"name": "name", "format": "", "type": "string"},
+            {"name": "geometry", "format": "", "type": "geometry"},
+            {"name": "count", "format": "", "type": "real"},
+            {"name": "importance", "format": "", "type": "real"},
+            {"name": "sentiment", "format": "", "type": "real"},
+        ],
+        "rows": []
+    }
+
+    for row in db_healthy.view('tweets_geo/info', group=True):
+
+        count, importance, sentiment = row.value
+
+        geometry = df.loc[df['lga_name11'] == row.key]['geometry'].to_list()[0]
+
+        tmp = [row.key, geometry, count, importance, sentiment]
+
+        data['rows'].append(tmp)
+
+    return data

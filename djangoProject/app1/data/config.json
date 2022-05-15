@@ -1,0 +1,11 @@
+{
+  "url_traffic_live": "http://admin:password@115.146.95.1:5984/",
+  "traffic_db_name_live": "transportationxm_live",
+  "url_healthy_live": "http://admin:password@115.146.95.1:5984/",
+  "healthy_db_name_live": "healthxm_live",
+
+  "url_traffic_historical": "http://admin:password@115.146.95.1:5984/",
+  "traffic_db_name_historical": "transportationxm_historical",
+  "url_healthy_historical": "http://admin:password@115.146.95.1:5984/",
+  "healthy_db_name_historical": "healthxm_historical"
+ }

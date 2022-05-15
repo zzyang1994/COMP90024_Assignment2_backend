@@ -18,16 +18,6 @@ def getData(request):
 
 # Create your views here.
 @csrf_exempt
-def index(request):
-    couch = couchdb.Server('http://admin:password@localhost:5984/')
-
-    db = couch['comp90024-group21']
-
-    db.save({"messi": "0"})
-
-    return HttpResponse("Welcome Messi~")
-
-@csrf_exempt
 def get_line_data(request):
     suburbs = []
     index = 0
@@ -39,10 +29,27 @@ def get_line_data(request):
         index += 1
         suburbs.append(sub)
 
-
     print(suburbs)
     t = {"data": {}, "msg": "Success"}
     t['data']['data'], t['data']['date_list'] = suburb_line_data(suburbs)
+    return JsonResponse(t)
+
+@csrf_exempt
+def get_line_data_historical(request):
+    print("MESSI---")
+    suburbs = []
+    index = 0
+    while (True):
+
+        sub = request.GET.get(f'sub{index}')
+        if (sub == None):
+            break
+        index += 1
+        suburbs.append(sub)
+
+    print(suburbs)
+    t = {"data": {}, "msg": "Success"}
+    t['data']['data'], t['data']['date_list'] = suburb_line_data(suburbs, "Historical")
     return JsonResponse(t)
 
 @csrf_exempt
@@ -130,4 +137,8 @@ def get_pie_data_healthy(request):
 
 @csrf_exempt
 def mapdata(request):
-    return JsonResponse(MAP_DATA)
+    return JsonResponse(get_map_data())
+
+@csrf_exempt
+def mapGeoData(request):
+    return JsonResponse(get_map_geoData())
