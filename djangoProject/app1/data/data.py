@@ -1,11 +1,11 @@
 import pandas as pd
 import datetime
-import random
 import couchdb
 import json
-import shapely.wkt
 
-with open('config.json','r') as f:
+print('data.py start')
+
+with open('/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/1.json','r') as f:
     configs = json.load(f)
     URL_Traffic = configs['url_traffic_live']
     URL_Healthy = configs['url_healthy_live']
@@ -20,14 +20,40 @@ with open('config.json','r') as f:
 db_traffic = couchdb.Server(URL_Traffic)[Traffic_database_name]
 db_healthy = couchdb.Server(URL_Healthy)[Healthy_database_name]
 
+def create_map_reduce(db, map_fun, reduce_fun, design_name, index_name):
+    """
+    create the map reduce to assigned couchdb
+    """
+    design = {'views': {
+        f"{index_name}": {
+            'map': map_fun,
+            'reduce': reduce_fun
+        }
+    }}
+
+    try:
+        db[f"_design/{design_name}"] = design
+
+    except:
+        print('already exist')
+
 
 def suburbs():
     """
     get the suburb names in Melbourne
     """
+    map_fun = '''function(doc) {
+        if (doc.city == 'Melbourne') {
+            emit(doc.suburb, 1);
+        }
+    }
+    '''
+    reduce_fun = "_count"
+    design_name = "suburbs"
+    index_name = "get_city"
 
+    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
     return [suburb.key for suburb in db_traffic.view('suburbs/get_city', group=True)]
-    # return traffic_df['lga_name11'].to_list()
 
 
 def get_pie_chart_traffic(indicator):
@@ -44,15 +70,23 @@ def get_pie_chart_traffic(indicator):
 
     PIE_DATA = []
 
-    for row in db_traffic.view('tweet_count_by_indicator/indicator', group_level=2):
+    map_fun = '''function(doc) {
+        if (doc.city == 'Melbourne') {
+            emit([doc.suburb, doc['Related to']], 1);
+        }
+    }
+    '''
+    reduce_fun = "_count"
+    design_name = "tweet_count_by_indicator"
+    index_name = "indicator"
+
+    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+    for row in db_traffic.view(f'{design_name}/{index_name}', group_level=2):
         key = row.key
         if key[1] == query_by:
             PIE_DATA.append([row.value, row.key[0]])
 
     return sorted(PIE_DATA, key=lambda item: item[0], reverse=True)[:10]
-
-
-# exit(0)
 
 
 def get_pie_chart_healthy(indicator):
@@ -71,7 +105,18 @@ def get_pie_chart_healthy(indicator):
 
     PIE_DATA = []
 
-    for row in db_healthy.view('tweet_count_by_indicator/indicator', group_level=2):
+    map_fun = '''function(doc) {
+        if (doc.city == 'Melbourne') {
+            emit([doc.suburb, doc.related_to], 1);
+        }
+    }
+    '''
+    reduce_fun = "_count"
+    design_name = "tweet_count_by_indicator"
+    index_name = "indicator"
+
+    create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
+    for row in db_healthy.view(f'{design_name}/{index_name}', group_level=2):
         key = row.key
         if key[1] == query_by:
             PIE_DATA.append([row.value, row.key[0]])
@@ -80,9 +125,9 @@ def get_pie_chart_healthy(indicator):
 
 
 def get_date(year, month, day):
-    '''
+    """
     get the datetime type variable from year(string), month(abbr string), day(string)
-    '''
+    """
     datetime_object = datetime.datetime.strptime(month, "%b")
     month_number = datetime_object.month
     return datetime.datetime(day=int(day), month=month_number, year=int(year))
@@ -93,29 +138,39 @@ def suburb_line_data(suburbs_list, time='Live'):
     get the daily tweet counts of suburbs
     """
 
+    map_fun = '''function(doc) {
+        emit([doc.suburb, doc.created_at_year, doc.created_at_month, doc.created_at_day], doc.importance);
+    }
+    '''
+    reduce_fun = "_sum"
+    design_name = "daily_count"
+    index_name = "daily"
+
     if time == 'Historical':
         print(URL_Traffic_H, URL_Healthy_H, Traffic_database_name_H, Healthy_database_name_H)
         db_traffic_H = couchdb.Server(URL_Traffic_H)[Traffic_database_name_H]
         db_healthy_H = couchdb.Server(URL_Healthy_H)[Healthy_database_name_H]
-
         try:
-            view_result_tr = db_traffic_H.view('daily_count/daily', group=True)
+
+            create_map_reduce(db_traffic_H, map_fun, reduce_fun, design_name, index_name)
+            view_result_tr = db_traffic_H.view(f'{design_name}/{index_name}', group=True)
         except:
             view_result_tr = []
             print("traffic error")
         try:
-            view_result_he = db_healthy_H.view('daily_count/daily', group=True)
+            create_map_reduce(db_healthy_H, map_fun, reduce_fun, design_name, index_name)
+            view_result_he = db_healthy_H.view(f'{design_name}/{index_name}', group=True)
         except:
             view_result_he = []
             print("healthy error")
     else:
-        view_result_tr = db_traffic.view('daily_count/daily', group=True)
-        view_result_he = db_healthy.view('daily_count/daily', group=True)
+        create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+        create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
+        view_result_tr = db_traffic.view(f'{design_name}/{index_name}', group=True)
+        view_result_he = db_healthy.view(f'{design_name}/{index_name}', group=True)
 
     date_list_timeStamp = []
     result = {}
-
-    # print(view_result_he, view_result_tr)
 
     for row in view_result_tr:
         sub = row.key[0]
@@ -132,7 +187,6 @@ def suburb_line_data(suburbs_list, time='Live'):
                     result[sub] = []
 
     for row in view_result_he:
-        # print(row)
         sub = row.key[0]
         if sub in suburbs_list:
             year = row.key[1]
@@ -150,7 +204,7 @@ def suburb_line_data(suburbs_list, time='Live'):
         sorted_data = sorted(data, key=lambda item: item[0])
         result[sub] = sorted_data
 
-        if date_list_timeStamp == []:
+        if not date_list_timeStamp:
             date_list_timeStamp = [i[0].strftime("%Y-%m-%d") for i in sorted_data]
 
         result[sub] = [i[1] for i in sorted_data]
@@ -160,8 +214,21 @@ def suburb_line_data(suburbs_list, time='Live'):
 
 def suburb_wordcloud_data(suburb_list):
     result = {}
+    map_fun = '''function(doc) {
+      var list = doc.text_cleaned.split(" ");
+      list.map(v => {
+        if (v) {
+          emit([doc.suburb, v], 1); 
+        }
+      })
+    }
+    '''
 
-    for row in db_traffic.view('text/textDetail', group=True):
+    reduce_fun = "_count"
+    design_name = "text"
+    index_name = "textDetail"
+    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+    for row in db_traffic.view(f'{design_name}/{index_name}', group=True):
         # print(row)
         if row.key[0] in suburb_list:
             if row.key[1] in result:
@@ -169,21 +236,14 @@ def suburb_wordcloud_data(suburb_list):
             else:
                 result[row.key[1]] = row.value
 
-    # for key in words.keys():
-    #     tmp = {"value": key, "count": words[key]}
-    #     result.append(tmp)
-    #     sum_ += 1
-    #     if sum_ > 60:
-    #         break
-    # print(result)
     sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
                            reverse=True)
-    # print(len(sorted_result))
+
     return sorted_result[:200]
 
 
 def get_fields(aspect):
-    # return traffic_df['lga_name11'].to_list()
+
     if aspect == "traffic":
         return ['congestion', 'crash_rate', 'accessible_station']
 
@@ -196,7 +256,18 @@ def get_bar_chart_traffic():
     query = ['q1', 'q2', 'q3']
     data = {}
 
-    for row in db_traffic.view('tweet_count_by_indicator/indicator', group_level=2):
+    map_fun = '''function(doc) {
+        if (doc.city == 'Melbourne') {
+            emit([doc.suburb, doc.related_to], 1);
+        }
+    }
+    '''
+    reduce_fun = "_count"
+    design_name = "tweet_count_by_indicator"
+    index_name = "indicator"
+
+    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+    for row in db_traffic.view(f'{design_name}/{index_name}', group_level=2):
         key = row.key
         if key[0] == "Melbourne":
             continue
@@ -221,15 +292,26 @@ def get_bar_chart_traffic():
 
 def get_bar_chart_healthy():
     BAR_DATA = {"smoking": [], "obesity": [], "exercise": [], "disease": []}
-    query = ['q1', 'q2', 'q3', 'q4']
+    query = ['q1', 'q2', 'q3', 'q4', 'q5']
     data = {}
 
-    for row in db_healthy.view('tweet_count_by_indicator/indicator', group_level=2):
+    map_fun = '''function(doc) {
+            if (doc.city == 'Melbourne') {
+                emit([doc.suburb, doc.related_to], 1);
+            }
+        }
+        '''
+    reduce_fun = "_count"
+    design_name = "tweet_count_by_indicator"
+    index_name = "indicator"
+
+    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+    for row in db_healthy.view(f'{design_name}/{index_name}', group_level=2):
         key = row.key
         if key[0] == "Melbourne":
             continue
         if key[0] not in data:
-            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0}
+            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0, 'q5': 0 }
 
         data[key[0]][key[1]] += row.value
 
@@ -237,11 +319,11 @@ def get_bar_chart_healthy():
         for i in query:
             if i == 'q1':
                 BAR_DATA['smoking'].append(data[sub][i])
-            elif i == 'q2':
+            elif i == 'q2' or i == 'q3':
                 BAR_DATA['obesity'].append(data[sub][i])
-            elif i == 'q3':
-                BAR_DATA['exercise'].append(data[sub][i])
             elif i == 'q4':
+                BAR_DATA['exercise'].append(data[sub][i])
+            elif i == 'q5':
                 BAR_DATA['disease'].append(data[sub][i])
 
     suburbs = [i for i in data.keys()]
@@ -260,7 +342,15 @@ def get_map_data():
         "rows": []
     }
 
-    for row in db_healthy.view('tweets/info'):
+    map_fun = '''function(doc) {
+        emit([doc.longitude, doc.latitude], [doc.importance, doc.sentiments, doc.created_at_year, doc.created_at_month, doc.created_at_day]);
+    }
+    '''
+    reduce_fun = "_count"
+    design_name = "tweets"
+    index_name = "info"
+    create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
+    for row in db_healthy.view(f'{design_name}/{index_name}'):
         longitude, latitude = row.key
         importance, sentiment, year, month, day = row.value
 
@@ -274,7 +364,7 @@ def get_map_data():
 
 
 def get_map_geoData():
-    df = pd.read_csv("suburbs_geometry.csv")
+    df = pd.read_csv("/Users/messifr/Desktop/Messi/MasterY1S1/CCC/django/COMP90024_Assignment2_backend/djangoProject/app1/data/suburbs_geometry.csv")
 
     data = {
         "fields": [
@@ -287,7 +377,16 @@ def get_map_geoData():
         "rows": []
     }
 
-    for row in db_healthy.view('tweets_geo/info', group=True):
+    map_fun = '''function(doc) {
+        emit(doc.suburb, [1, doc.importance, doc.sentiments]);
+    }
+    '''
+    reduce_fun = "_sum"
+    design_name = "tweets_geo"
+    index_name = "info"
+
+    create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
+    for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
 
         count, importance, sentiment = row.value
 
