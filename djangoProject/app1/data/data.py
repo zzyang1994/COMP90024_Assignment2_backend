@@ -5,7 +5,7 @@ import couchdb
 import json
 import shapely.wkt
 
-with open('config.json','r') as f:
+with open('./app1/data/config.json','r') as f:
     configs = json.load(f)
     URL_Traffic = configs['url_traffic_live']
     URL_Healthy = configs['url_healthy_live']
