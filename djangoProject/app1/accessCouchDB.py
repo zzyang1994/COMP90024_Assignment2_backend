@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def getRawData():
-    couch = couchdb.Server('http://admin:password@localhost:5984/')
+    couch = couchdb.Server('http://admin:password@115.146.95.1:5984/')
 
     db = couch['comp90024-group21']
 
