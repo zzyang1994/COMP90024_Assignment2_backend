@@ -3,7 +3,7 @@ import datetime
 import couchdb
 import json
 
-with open('./app1/data/1.json', 'r') as f:
+with open('./app1/data/config.json', 'r') as f:
     configs = json.load(f)
     URL_Traffic = configs['url_traffic_live']
     URL_Healthy = configs['url_healthy_live']
