@@ -19,6 +19,7 @@ with open('./app1/data/config.json','r') as f:
 db_traffic = couchdb.Server(URL_Traffic)[Traffic_database_name]
 db_healthy = couchdb.Server(URL_Healthy)[Healthy_database_name]
 
+
 def create_map_reduce(db, map_fun, reduce_fun, design_name, index_name):
     """
     create the map reduce to assigned couchdb
@@ -42,7 +43,7 @@ def suburbs():
     get the suburb names in Melbourne
     """
     map_fun = '''function(doc) {
-        if (doc.city.includes('Melbourne')) {
+        if (doc.city.match('Melbourne')) {
             emit(doc.suburb, 1);
         }
     }
@@ -70,7 +71,7 @@ def get_pie_chart_traffic(indicator):
     PIE_DATA = []
 
     map_fun = '''function(doc) {
-        if (doc.city.includes('Melbourne')) {
+        if (doc.city.match('Melbourne') && doc['Related to']) {
             emit([doc.suburb, doc['Related to']], 1);
         }
     }
@@ -105,7 +106,7 @@ def get_pie_chart_healthy(indicator):
     PIE_DATA = []
 
     map_fun = '''function(doc) {
-        if (doc.city.includes('Melbourne')) {
+        if (doc.city.match('Melbourne') && doc['Related to']) {
             emit([doc.suburb, doc['Related to']], 1);
         }
     }
@@ -257,7 +258,7 @@ def get_bar_chart_traffic():
     data = {}
 
     map_fun = '''function(doc) {
-        if (doc.city.includes('Melbourne')) {
+        if (doc.city.match('Melbourne') && doc['Related to']) {
             emit([doc.suburb, doc['Related to']], 1);
         }
     }
@@ -275,7 +276,8 @@ def get_bar_chart_traffic():
         if key[0] not in data:
             data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0}
 
-        data[key[0]][key[1]] += row.value
+        if key[1] in ['q1', 'q2', 'q3']:
+            data[key[0]][key[1]] += row.value
 
     for sub in data:
         for i in query:
@@ -296,7 +298,7 @@ def get_bar_chart_healthy():
     data = {}
 
     map_fun = '''function(doc) {
-            if (doc.city.includes('Melbourne')) {
+            if (doc.city.match('Melbourne') && doc['Related to']) {
                 emit([doc.suburb, doc['Related to']], 1);
             }
         }
@@ -313,7 +315,8 @@ def get_bar_chart_healthy():
         if key[0] not in data:
             data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0, 'q5': 0 }
 
-        data[key[0]][key[1]] += row.value
+        if key[1] in ['q1', 'q2', 'q3', 'q4', 'q5']:
+            data[key[0]][key[1]] += row.value
 
     for sub in data:
         for i in query:
