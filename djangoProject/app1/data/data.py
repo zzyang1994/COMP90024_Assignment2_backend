@@ -221,8 +221,9 @@ def suburb_wordcloud_data(indicator):
     map_fun = '''function(doc) {
       var list = doc.text_cleaned.split(" ");
       list.map(v => {
-        if (v) {
-          emit(v, 1); 
+        var n = v.replace(/[`:_.~!@#$%^&*() \+ =<>?"{}|, \/ ;'1234567890\\ [ \] ·~！@#￥%……&*（）—— \+ ={}|《》？：“”【】、；‘’，。、]/g,'');
+        if (n.length > 4) {
+          emit(n, 1); 
         }
       })
     }
