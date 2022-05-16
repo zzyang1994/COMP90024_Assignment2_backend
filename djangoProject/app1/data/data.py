@@ -346,7 +346,9 @@ def get_map_data():
     }
 
     map_fun = '''function(doc) {
-        emit([doc.longitude, doc.latitude], [doc.importance, doc.sentiments, doc.created_at_year, doc.created_at_month, doc.created_at_day]);
+        if (doc.longitude && doc.latitude) {
+            emit([doc.longitude, doc.latitude], [doc.importance, doc.sentiments, doc.created_at_year, doc.created_at_month, doc.created_at_day]);
+        }
     }
     '''
     reduce_fun = "_count"
