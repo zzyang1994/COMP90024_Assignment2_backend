@@ -366,7 +366,8 @@ def get_map_data():
     index_name = "info"
     create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
     for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
-        longitude, latitude = row.key
+        longitude = row.key[0]
+        latitude = row.key[1]
         importance, sentiment, year, month, day = row.value
 
         date = get_date(year, month, day).strftime("%Y-%m-%d")
