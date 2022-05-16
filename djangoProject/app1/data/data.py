@@ -346,7 +346,6 @@ def get_bar_chart_healthy():
 def get_map_data():
     data = {
         "fields": [
-            {"name": "time", "format": "yyyy-MM-dd", "type": "timestamp"},
             {"name": "lat", "format": "", "type": "real"},
             {"name": "long", "format": "", "type": "real"},
             {"name": "importance", "format": "", "type": "real"},
@@ -357,24 +356,30 @@ def get_map_data():
 
     map_fun = '''function(doc) {
         if (doc.longitude && doc.latitude) {
-            emit([doc.longitude, doc.latitude], [doc.importance, doc.sentiments, doc.created_at_year, doc.created_at_month, doc.created_at_day]);
+            emit([doc.longitude, doc.latitude], [doc.importance, doc.sentiments]);
         }
     }
     '''
-    reduce_fun = "_count"
+    reduce_fun = "_sum"
     design_name = "tweets"
     index_name = "info"
+
     create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
     for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
-        longitude = row.key[0]
-        latitude = row.key[1]
-        importance, sentiment, year, month, day = row.value
 
-        date = get_date(year, month, day).strftime("%Y-%m-%d")
+        try:
+            longitude = row.key[0]
+            latitude = row.key[1]
 
-        tmp = [date, latitude, longitude, importance, sentiment]
+            importance = row.value[0]
+            sentiment = row.value[1]
 
-        data['rows'].append(tmp)
+            tmp = [latitude, longitude, importance, sentiment]
+
+            data['rows'].append(tmp)
+            print(data)
+        except:
+            continue
 
     return data
 
@@ -403,12 +408,16 @@ def get_map_geoData():
 
     create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
     for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
-        count, importance, sentiment = row.value
+        try:
+            count, importance, sentiment = row.value
+            print(row)
 
-        geometry = df.loc[df['lga_name11'] == row.key]['geometry'].to_list()[0]
+            geometry = df.loc[df['lga_name11'] == row.key]['geometry'].to_list()[0]
 
-        tmp = [row.key, geometry, count, importance, sentiment]
+            tmp = [row.key, geometry, count, importance, sentiment]
 
-        data['rows'].append(tmp)
+            data['rows'].append(tmp)
+        except:
+            continue
 
     return data
