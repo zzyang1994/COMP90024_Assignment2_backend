@@ -244,7 +244,7 @@ def suburb_wordcloud_data(indicator):
             result[row.key] += row.value
         else:
             if row.key not in ['rt', 'pt', 'gun', 'nigga'] \
-                    and (len(row.key) > 3) and ():
+                    and (len(row.key) > 3):
                 result[row.key] = row.value
 
     sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
