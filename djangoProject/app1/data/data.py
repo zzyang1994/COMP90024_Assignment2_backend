@@ -237,16 +237,19 @@ def suburb_wordcloud_data(indicator):
     else:
         db_ = db_healthy
     create_map_reduce(db_, map_fun, reduce_fun, design_name, index_name)
+
     for row in db_.view(f'{design_name}/{index_name}', group=True):
+
         if row.key in result:
             result[row.key] += row.value
         else:
-            if row.key not in ['rt', 'pt', 'gun', 'nigga', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] \
-                    and (len(row.key) > 3):
+            if row.key not in ['rt', 'pt', 'gun', 'nigga'] \
+                    and (len(row.key) > 3) and ():
                 result[row.key] = row.value
 
     sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
                            reverse=True)
+
     return sorted_result[:200]
 
 
@@ -361,7 +364,7 @@ def get_map_data():
     design_name = "tweets"
     index_name = "info"
     create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
-    for row in db_healthy.view(f'{design_name}/{index_name}'):
+    for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
         longitude, latitude = row.key
         importance, sentiment, year, month, day = row.value
 
