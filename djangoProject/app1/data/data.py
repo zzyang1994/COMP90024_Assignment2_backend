@@ -3,8 +3,7 @@ import datetime
 import couchdb
 import json
 
-with open('./app1/data/config.json','r') as f:
-
+with open('./app1/data/1.json', 'r') as f:
     configs = json.load(f)
     URL_Traffic = configs['url_traffic_live']
     URL_Healthy = configs['url_healthy_live']
@@ -38,7 +37,7 @@ def create_map_reduce(db, map_fun, reduce_fun, design_name, index_name):
         print('already exist')
 
 
-def suburbs():
+def suburbs(time="Live"):
     """
     get the suburb names in Melbourne
     """
@@ -51,9 +50,15 @@ def suburbs():
     reduce_fun = "_count"
     design_name = "suburbs"
     index_name = "get_city"
+    print("get suburbs from : ", time)
+    if time == "historical":
+        db_traffic_H = couchdb.Server(URL_Traffic_H)[Traffic_database_name_H]
+        create_map_reduce(db_traffic_H, map_fun, reduce_fun, design_name, index_name)
+        return [suburb.key for suburb in db_traffic_H.view('suburbs/get_city', group=True)]
 
-    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
-    return [suburb.key for suburb in db_traffic.view('suburbs/get_city', group=True)]
+    else:
+        create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
+        return [suburb.key for suburb in db_traffic.view('suburbs/get_city', group=True)]
 
 
 def get_pie_chart_traffic(indicator):
@@ -147,7 +152,6 @@ def suburb_line_data(suburbs_list, time='Live'):
     index_name = "daily"
 
     if time == 'Historical':
-        print(URL_Traffic_H, URL_Healthy_H, Traffic_database_name_H, Healthy_database_name_H)
         db_traffic_H = couchdb.Server(URL_Traffic_H)[Traffic_database_name_H]
         db_healthy_H = couchdb.Server(URL_Healthy_H)[Healthy_database_name_H]
         try:
@@ -156,14 +160,15 @@ def suburb_line_data(suburbs_list, time='Live'):
             view_result_tr = db_traffic_H.view(f'{design_name}/{index_name}', group=True)
         except:
             view_result_tr = []
-            print("traffic error")
+            print("get view from traffic historical error")
         try:
             create_map_reduce(db_healthy_H, map_fun, reduce_fun, design_name, index_name)
             view_result_he = db_healthy_H.view(f'{design_name}/{index_name}', group=True)
         except:
             view_result_he = []
-            print("healthy error")
+            print("get view from healthy historical error")
     else:
+        print("from live data")
         create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
         create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
         view_result_tr = db_traffic.view(f'{design_name}/{index_name}', group=True)
@@ -174,17 +179,17 @@ def suburb_line_data(suburbs_list, time='Live'):
 
     for row in view_result_tr:
         sub = row.key[0]
+
         if sub in suburbs_list:
             year = row.key[1]
             month = row.key[2]
             day = row.key[3]
             date = get_date(year, month, day)
 
-            if sub in suburbs_list:
-                if sub in result:
-                    result[sub].append([date, row.value])
-                else:
-                    result[sub] = []
+            if sub in result:
+                result[sub].append([date, row.value])
+            else:
+                result[sub] = [[date, row.value]]
 
     for row in view_result_he:
         sub = row.key[0]
@@ -194,10 +199,9 @@ def suburb_line_data(suburbs_list, time='Live'):
             day = row.key[3]
             date = get_date(year, month, day)
 
-            if sub in suburbs_list:
-                for i in range(len(result[sub])):
-                    if date == result[sub][i][0]:
-                        result[sub][i][1] += row.value
+            for i in range(len(result[sub])):
+                if date == result[sub][i][0]:
+                    result[sub][i][1] += row.value
 
     for sub in result:
         data = result[sub]
@@ -212,13 +216,13 @@ def suburb_line_data(suburbs_list, time='Live'):
     return result, date_list_timeStamp
 
 
-def suburb_wordcloud_data(suburb_list):
+def suburb_wordcloud_data(indicator):
     result = {}
     map_fun = '''function(doc) {
       var list = doc.text_cleaned.split(" ");
       list.map(v => {
         if (v) {
-          emit([doc.suburb, v], 1); 
+          emit(v, 1); 
         }
       })
     }
@@ -227,24 +231,26 @@ def suburb_wordcloud_data(suburb_list):
     reduce_fun = "_count"
     design_name = "text"
     index_name = "textDetail"
-    create_map_reduce(db_traffic, map_fun, reduce_fun, design_name, index_name)
-    for row in db_traffic.view(f'{design_name}/{index_name}', group=True):
-        # print(row)
-        if row.key[0] in suburb_list:
-            if row.key[1] in result:
-                result[row.key[1]] += row.value
-            else:
-                if row.key[1] not in ['rt', 'nigga', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
-                    result[row.key[1]] = row.value
+
+    if indicator == "traffic":
+        db_ = db_traffic
+    else:
+        db_ = db_healthy
+    create_map_reduce(db_, map_fun, reduce_fun, design_name, index_name)
+    for row in db_.view(f'{design_name}/{index_name}', group=True):
+        if row.key in result:
+            result[row.key] += row.value
+        else:
+            if row.key not in ['rt', 'pt', 'gun', 'nigga', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] \
+                    and (len(row.key) > 3):
+                result[row.key] = row.value
 
     sorted_result = sorted([{"value": i, "count": result[i]} for i in result], key=lambda item: item["count"],
                            reverse=True)
-
     return sorted_result[:200]
 
 
 def get_fields(aspect):
-
     if aspect == "traffic":
         return ['congestion', 'crash_rate', 'accessible_station']
 
@@ -313,7 +319,7 @@ def get_bar_chart_healthy():
         if key[0] == "Melbourne":
             continue
         if key[0] not in data:
-            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0, 'q5': 0 }
+            data[key[0]] = {'q1': 0, 'q2': 0, 'q3': 0, 'q4': 0, 'q5': 0}
 
         if key[1] in ['q1', 'q2', 'q3', 'q4', 'q5']:
             data[key[0]][key[1]] += row.value
@@ -392,7 +398,6 @@ def get_map_geoData():
 
     create_map_reduce(db_healthy, map_fun, reduce_fun, design_name, index_name)
     for row in db_healthy.view(f'{design_name}/{index_name}', group=True):
-
         count, importance, sentiment = row.value
 
         geometry = df.loc[df['lga_name11'] == row.key]['geometry'].to_list()[0]

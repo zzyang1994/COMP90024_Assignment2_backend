@@ -36,7 +36,6 @@ def get_line_data(request):
 
 @csrf_exempt
 def get_line_data_historical(request):
-    print("MESSI---")
     suburbs = []
     index = 0
     while (True):
@@ -54,24 +53,15 @@ def get_line_data_historical(request):
 
 @csrf_exempt
 def get_word_cloud(request):
-    suburbs = []
-    index = 0
-    while (True):
-
-        sub = request.GET.get(f'sub{index}')
-        if (sub == None):
-            break
-        index += 1
-        suburbs.append(sub)
-
+    indicator = request.GET.get('indicator')
     t = {"data": {}, "msg": "Success"}
-    t['data'] = suburb_wordcloud_data(suburbs)
+    t['data'] = suburb_wordcloud_data(indicator)
     return JsonResponse(t)
 
 @csrf_exempt
 def get_suburb(request):
-
-    return JsonResponse({"data": suburbs(), "msg": ""})
+    time = request.GET.get('time')
+    return JsonResponse({"data": suburbs(time), "msg": ""})
 
 @csrf_exempt
 def getfields_traffic(request):
